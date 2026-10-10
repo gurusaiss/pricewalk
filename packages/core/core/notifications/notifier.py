@@ -26,6 +26,18 @@ BATCH_THRESHOLD = 5
 
 _BUYER_RELEVANT_EVENTS = {ChangeEventType.price_drop, ChangeEventType.back_in_stock}
 
+_IST_OFFSET = timedelta(hours=5, minutes=30)
+
+
+def _is_quiet_hours(user: User, now_utc: datetime) -> bool:
+    if user.quiet_hours_start is None or user.quiet_hours_end is None:
+        return False
+    ist_hour = (now_utc + _IST_OFFSET).hour
+    start, end = user.quiet_hours_start, user.quiet_hours_end
+    if start <= end:
+        return start <= ist_hour < end
+    return ist_hour >= start or ist_hour < end  # window wraps past midnight
+
 
 async def notify_change_event(
     session: Session,
@@ -50,6 +62,10 @@ async def notify_change_event(
     for item in tracked_items:
         user = session.get(User, item.user_id)
         if user is None or not user.telegram_chat_id:
+            continue
+        if "telegram" not in user.alert_channels:
+            continue
+        if user.alert_event_types and change_event.type.value not in user.alert_event_types:
             continue
 
         if user.role == UserRole.buyer:
@@ -96,7 +112,7 @@ async def notify_change_event(
 
         alert = Alert(user_id=user.id, change_event_id=change_event.id, channel=channel)
 
-        if recent_sent_count >= BATCH_THRESHOLD:
+        if recent_sent_count >= BATCH_THRESHOLD or _is_quiet_hours(user, now):
             alert.status = AlertStatus.pending
             session.add(alert)
             session.commit()

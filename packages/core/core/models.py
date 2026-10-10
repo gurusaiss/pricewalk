@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     DateTime,
@@ -79,6 +80,11 @@ class User(Base):
     role: Mapped[UserRole | None] = mapped_column(Enum(UserRole, native_enum=False), nullable=True)
     plan: Mapped[str] = mapped_column(String(64), default="trial")
     telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Alert preferences. Empty alert_event_types means "all event types".
+    alert_channels: Mapped[list[str]] = mapped_column(JSON, default=lambda: ["telegram"])
+    alert_event_types: Mapped[list[str]] = mapped_column(JSON, default=list)
+    quiet_hours_start: Mapped[int | None] = mapped_column(nullable=True)
+    quiet_hours_end: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     tracked_items: Mapped[list["TrackedItem"]] = relationship(back_populates="user")

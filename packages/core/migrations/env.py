@@ -37,7 +37,14 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        # SQLite can't ALTER COLUMN directly, only Postgres is a real deploy
+        # target, so batch mode (table-recreate) is scoped to local sqlite use
+        # (manual migration generation/testing) and never affects Postgres.
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=connection.dialect.name == "sqlite",
+        )
         with context.begin_transaction():
             context.run_migrations()
 

@@ -231,6 +231,92 @@ async def test_unlinked_user_is_skipped(db_session: Session) -> None:
 
 
 @pytest.mark.asyncio
+async def test_event_type_not_in_preferences_is_skipped(db_session: Session) -> None:
+    seller = User(
+        email="seller_prefs@example.com",
+        role=UserRole.seller,
+        telegram_chat_id="111",
+        alert_event_types=["deal_start"],
+    )
+    product = _make_product(db_session, "B0ALERT012")
+    db_session.add(seller)
+    db_session.commit()
+    db_session.add(
+        TrackedItem(user_id=seller.id, product_id=product.id, kind=TrackedItemKind.competitor)
+    )
+    db_session.commit()
+    event = _make_change_event(db_session, product, type_=ChangeEventType.price_drop)
+
+    client = FakeTelegramClient()
+    await notify_change_event(db_session, client, event)
+
+    assert client.sent == []
+
+
+@pytest.mark.asyncio
+async def test_channel_not_enabled_is_skipped(db_session: Session) -> None:
+    seller = User(
+        email="seller_nochannel@example.com",
+        role=UserRole.seller,
+        telegram_chat_id="111",
+        alert_channels=[],
+    )
+    product = _make_product(db_session, "B0ALERT013")
+    db_session.add(seller)
+    db_session.commit()
+    db_session.add(
+        TrackedItem(user_id=seller.id, product_id=product.id, kind=TrackedItemKind.competitor)
+    )
+    db_session.commit()
+    event = _make_change_event(db_session, product)
+
+    client = FakeTelegramClient()
+    await notify_change_event(db_session, client, event)
+
+    assert client.sent == []
+
+
+@pytest.mark.asyncio
+async def test_quiet_hours_queues_as_pending_instead_of_sending(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 10 PM - 7 AM IST quiet window; 23:00 UTC -> 04:30 IST, inside the window.
+    seller = User(
+        email="seller_quiet@example.com",
+        role=UserRole.seller,
+        telegram_chat_id="111",
+        quiet_hours_start=22,
+        quiet_hours_end=7,
+    )
+    product = _make_product(db_session, "B0ALERT014")
+    db_session.add(seller)
+    db_session.commit()
+    db_session.add(
+        TrackedItem(user_id=seller.id, product_id=product.id, kind=TrackedItemKind.competitor)
+    )
+    db_session.commit()
+    event = _make_change_event(db_session, product)
+
+    quiet_moment = datetime(2026, 1, 1, 23, 0, tzinfo=UTC)
+
+    import core.notifications.notifier as notifier_module
+
+    class _FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # type: ignore[override]
+            return quiet_moment
+
+    monkeypatch.setattr(notifier_module, "datetime", _FixedDatetime)
+
+    client = FakeTelegramClient()
+    await notify_change_event(db_session, client, event)
+
+    assert client.sent == []
+    alert = db_session.query(Alert).filter_by(change_event_id=event.id).one()
+    assert alert.status == AlertStatus.pending
+
+
+@pytest.mark.asyncio
 async def test_more_than_threshold_alerts_in_window_are_batched_as_pending(
     db_session: Session,
 ) -> None:
