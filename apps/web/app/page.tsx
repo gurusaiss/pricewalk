@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Home() {
@@ -13,8 +15,12 @@ export default function Home() {
           buy — and get alerted the moment something changes.
         </p>
         <div className="flex gap-3">
-          <Button>I sell online</Button>
-          <Button variant="outline">I shop online</Button>
+          <Link href="/login" className={buttonVariants({ variant: "default" })}>
+            I sell online
+          </Link>
+          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+            I shop online
+          </Link>
         </div>
       </div>
 

@@ -87,7 +87,8 @@ def due_products(session: Session, now: datetime | None = None) -> list[Product]
     roles_by_product: dict[uuid.UUID, set[UserRole]] = defaultdict(set)
     products_by_id: dict[uuid.UUID, Product] = {}
     for product, role in rows:
-        roles_by_product[product.id].add(role)
+        if role is not None:  # role is unset until onboarding; can't weigh in yet
+            roles_by_product[product.id].add(role)
         products_by_id[product.id] = product
 
     due = []

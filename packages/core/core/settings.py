@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
 
+    brevo_api_key: str = ""
+    brevo_sender_email: str = "noreply@pricewalk.app"
+
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""

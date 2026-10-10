@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.main import app
 from api.routers import telegram as telegram_router
+from core.auth import get_current_user
 from core.db import Base, get_db
 from core.models import User, UserRole
 
@@ -20,12 +21,24 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     return redis
 
 
+def _override_current_user(user: User):  # type: ignore[no-untyped-def]
+    def _dep() -> User:
+        return user
+
+    return _dep
+
+
 def test_create_link_token_returns_deep_link(fake_redis: FakeAsyncRedis) -> None:
-    response = client.post("/telegram/link-token/some-user-id")
-    assert response.status_code == 200
-    body = response.json()
-    assert "deep_link" in body
-    assert "?start=" in body["deep_link"]
+    fake_user = User(email="linker@example.com", role=UserRole.seller)
+    app.dependency_overrides[get_current_user] = _override_current_user(fake_user)
+    try:
+        response = client.post("/telegram/link-token")
+        assert response.status_code == 200
+        body = response.json()
+        assert "deep_link" in body
+        assert "?start=" in body["deep_link"]
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_webhook_links_user_on_valid_start_token(fake_redis: FakeAsyncRedis) -> None:
@@ -46,9 +59,10 @@ def test_webhook_links_user_on_valid_start_token(fake_redis: FakeAsyncRedis) -> 
     session.commit()
 
     app.dependency_overrides[get_db] = lambda: session
+    app.dependency_overrides[get_current_user] = _override_current_user(user)
     try:
         with TestClient(app) as scoped_client:
-            token_response = scoped_client.post(f"/telegram/link-token/{user.id}")
+            token_response = scoped_client.post("/telegram/link-token")
             token = token_response.json()["deep_link"].split("?start=")[1]
 
             webhook_response = scoped_client.post(
@@ -62,6 +76,7 @@ def test_webhook_links_user_on_valid_start_token(fake_redis: FakeAsyncRedis) -> 
         assert user.telegram_chat_id == "555555"
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
         session.close()
         engine.dispose()
 

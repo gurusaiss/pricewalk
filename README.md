@@ -51,6 +51,7 @@ Web:
 
 ```bash
 cd apps/web
+cp .env.example .env   # JWT_SECRET must match the backend's
 npm install
 npm run dev
 ```

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
+from core.auth import get_current_user
 from core.db import get_db
 from core.models import User
 from core.notifications import TelegramClient, create_link_token, resolve_link_token
@@ -18,16 +19,15 @@ def _redis() -> Redis:
     return Redis.from_url(settings.redis_url, decode_responses=True)
 
 
-@router.post("/link-token/{user_id}")
-async def create_telegram_link(user_id: str) -> dict[str, str]:
-    """Generate a one-time /start deep link for a user to connect their Telegram
-    account. Takes user_id directly (no auth) until M7 wires real auth - this
-    endpoint should be re-guarded to use the authenticated user at that point.
+@router.post("/link-token")
+async def create_telegram_link(user: User = Depends(get_current_user)) -> dict[str, str]:
+    """Generate a one-time /start deep link for the signed-in user to connect
+    their Telegram account.
     """
     settings = get_settings()
     redis = _redis()
     try:
-        token = await create_link_token(redis, user_id)
+        token = await create_link_token(redis, str(user.id))
     finally:
         await redis.aclose()
 
