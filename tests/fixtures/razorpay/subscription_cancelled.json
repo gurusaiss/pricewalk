@@ -1,0 +1,15 @@
+{
+  "entity": "event",
+  "event": "subscription.cancelled",
+  "payload": {
+    "subscription": {
+      "entity": {
+        "id": "sub_TEST00000000001",
+        "plan_id": "plan_TESTSTARTER",
+        "status": "cancelled",
+        "current_start": 1752592000,
+        "current_end": 1755184000
+      }
+    }
+  }
+}

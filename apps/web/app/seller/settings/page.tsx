@@ -60,6 +60,7 @@ export default function SellerAlertSettingsPage() {
             { href: "/seller", label: "Groups" },
             { href: "/seller/alerts", label: "Alerts" },
             { href: "/seller/settings", label: "Alert settings" },
+            { href: "/seller/billing", label: "Billing" },
             { href: "/settings", label: "Account" },
           ]}
         />

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
+    razorpay_plan_id_starter: str = ""
+    razorpay_plan_id_growth: str = ""
 
     affiliate_tag_amazon: str = ""
     affiliate_tag_flipkart: str = ""

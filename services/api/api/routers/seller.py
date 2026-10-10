@@ -21,7 +21,7 @@ from core.models import (
     User,
     UserRole,
 )
-from core.plans import competitor_limit_for
+from core.plans import competitor_limit_for, effective_plan_name
 from core.products import get_or_create_product
 
 router = APIRouter(prefix="/seller")
@@ -173,7 +173,7 @@ def add_competitor(
     if group is None or group.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Group not found")
 
-    limit = competitor_limit_for(user.plan)
+    limit = competitor_limit_for(effective_plan_name(user, user.subscription))
     active_competitor_count = len(
         db.scalars(
             select(TrackedItem.id).where(

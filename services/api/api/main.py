@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import admin, auth, buyer, health, redirect, seller, telegram
+from api.routers import admin, auth, billing, buyer, health, redirect, seller, telegram
 
 app = FastAPI(title="PriceWalk API")
 
@@ -20,3 +20,4 @@ app.include_router(telegram.router)
 app.include_router(seller.router)
 app.include_router(buyer.router)
 app.include_router(redirect.router)
+app.include_router(billing.router)

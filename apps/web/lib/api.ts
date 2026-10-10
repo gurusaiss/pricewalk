@@ -225,3 +225,28 @@ export function formatRupees(paise: number | null | undefined): string {
   if (paise === null || paise === undefined) return "—";
   return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 }
+
+export type PlanInfo = {
+  id: string;
+  name: string;
+  monthly_price_paise: number;
+  competitor_limit: number;
+};
+
+export type BillingInfo = {
+  current_plan: string;
+  subscription_status: string | null;
+  current_period_end: string | null;
+  plans: PlanInfo[];
+};
+
+export function getBilling() {
+  return apiFetch<BillingInfo>("/seller/billing");
+}
+
+export function subscribeToPlan(plan: string) {
+  return apiFetch<{ subscription_id: string; checkout_url: string | null }>(
+    "/seller/billing/subscribe",
+    { method: "POST", body: JSON.stringify({ plan }) },
+  );
+}

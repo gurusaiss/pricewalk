@@ -1,0 +1,15 @@
+{
+  "entity": "event",
+  "event": "subscription.activated",
+  "payload": {
+    "subscription": {
+      "entity": {
+        "id": "sub_TEST00000000001",
+        "plan_id": "plan_TESTSTARTER",
+        "status": "active",
+        "current_start": 1750000000,
+        "current_end": 1752592000
+      }
+    }
+  }
+}
