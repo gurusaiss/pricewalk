@@ -65,6 +65,18 @@ make migrate    # alembic upgrade head (packages/core)
 make migration m="add users table"   # new alembic revision
 ```
 
+## Checking a real product page manually
+
+```bash
+python -m core.fetch "https://www.amazon.in/dp/B08N5WRWNW"
+```
+
+Prints the parsed marketplace, id, and `ProductSnapshot` (title/price/stock/etc.) as
+JSON. Needs Redis running (`REDIS_URL`) for the per-domain rate limiter and
+block/CAPTCHA pause tracking. If the plain HTML fetch doesn't find a price, it
+falls back to a headless-browser render via Playwright - run `playwright install
+chromium` once before relying on that path.
+
 ## Database migrations
 
 Alembic lives in `packages/core`. With a database reachable at `DATABASE_URL`:

@@ -1,7 +1,19 @@
+from core.models import Marketplace
+
 from . import amazon, flipkart, meesho
-from .base import ParsedProductUrl, UnsupportedUrlError, UrlResolver
+from .base import ParsedProductUrl, ProductSnapshot, UnsupportedUrlError, UrlResolver
 from .http_resolver import resolve_redirect
 from .urls import normalize, split_host_path
+
+_PAGE_PARSERS = {
+    Marketplace.amazon_in: amazon.parse_page,
+    Marketplace.flipkart: flipkart.parse_page,
+    Marketplace.meesho: meesho.parse_page,
+}
+
+
+def parse_page(marketplace: Marketplace, html: str) -> ProductSnapshot:
+    return _PAGE_PARSERS[marketplace](html)
 
 
 def parse_url(url: str, resolve: UrlResolver = resolve_redirect) -> ParsedProductUrl:
