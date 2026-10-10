@@ -9,7 +9,9 @@ from core.change_detection import PriceState, detect_changes
 from core.db import SessionLocal
 from core.fetching import BlockedError, DomainPausedError, fetch_snapshot
 from core.models import ChangeEvent, PricePoint, Product
+from core.notifications import TelegramClient, notify_change_event
 from core.scheduling import hash_snapshot, should_store_price_point
+from core.settings import get_settings
 
 logger = logging.getLogger("worker.jobs")
 
@@ -50,6 +52,8 @@ async def fetch_product(ctx: dict[str, Any], product_id: str) -> None:
             .limit(1)
         ).first()
 
+        new_change_events: list[ChangeEvent] = []
+
         if should_store_price_point(last_point.ts if last_point else None, hash_changed, now):
             session.add(
                 PricePoint(
@@ -76,15 +80,15 @@ async def fetch_product(ctx: dict[str, Any], product_id: str) -> None:
                     deal_label=snapshot.deal_label,
                 )
                 for change in detect_changes(previous_state, current_state):
-                    session.add(
-                        ChangeEvent(
-                            product_id=product.id,
-                            ts=now,
-                            type=change.type,
-                            old_value=change.old_value,
-                            new_value=change.new_value,
-                        )
+                    event = ChangeEvent(
+                        product_id=product.id,
+                        ts=now,
+                        type=change.type,
+                        old_value=change.old_value,
+                        new_value=change.new_value,
                     )
+                    session.add(event)
+                    new_change_events.append(event)
 
         if snapshot.title:
             product.title = snapshot.title
@@ -93,3 +97,9 @@ async def fetch_product(ctx: dict[str, Any], product_id: str) -> None:
         product.last_checked_at = now
         product.last_raw_hash = new_hash
         session.commit()
+
+        settings = get_settings()
+        if new_change_events and settings.telegram_bot_token:
+            client = TelegramClient(settings.telegram_bot_token)
+            for event in new_change_events:
+                await notify_change_event(session, client, event)

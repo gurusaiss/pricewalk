@@ -76,6 +76,7 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, native_enum=False))
     plan: Mapped[str] = mapped_column(String(64), default="trial")
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     tracked_items: Mapped[list["TrackedItem"]] = relationship(back_populates="user")

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
 
     telegram_bot_token: str = ""
+    telegram_bot_username: str = ""
 
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""

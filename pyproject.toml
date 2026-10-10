@@ -50,6 +50,9 @@ extend-exclude = ["packages/core/migrations/versions"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends"]
+
 [tool.mypy]
 python_version = "3.12"
 mypy_path = "packages/core:services/api:services/worker"
