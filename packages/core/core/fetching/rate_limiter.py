@@ -30,9 +30,7 @@ class DomainRateLimiter:
         waited = 0.0
         delay = 0.1
         while True:
-            acquired = await self._redis.set(
-                key, "1", px=int(self._min_interval * 1000), nx=True
-            )
+            acquired = await self._redis.set(key, "1", px=int(self._min_interval * 1000), nx=True)
             if acquired:
                 return
             if waited >= self._max_wait:

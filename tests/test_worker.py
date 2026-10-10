@@ -7,5 +7,9 @@ def test_heartbeat_runs() -> None:
     asyncio.run(heartbeat({}))
 
 
-def test_worker_settings_has_cron_job() -> None:
-    assert len(WorkerSettings.cron_jobs) == 1
+def test_worker_settings_has_cron_jobs() -> None:
+    assert len(WorkerSettings.cron_jobs) == 2
+
+
+def test_worker_settings_registers_fetch_product() -> None:
+    assert len(WorkerSettings.functions) == 1

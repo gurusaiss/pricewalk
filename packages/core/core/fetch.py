@@ -14,11 +14,9 @@ from core.settings import get_settings
 
 async def _main(url: str) -> None:
     settings = get_settings()
-    redis = Redis.from_url(settings.redis_url)
+    redis = Redis.from_url(settings.redis_url, decode_responses=True)
     try:
-        parsed, snapshot = await fetch_snapshot(
-            url, redis, playwright_fetch=fetch_with_playwright
-        )
+        parsed, snapshot = await fetch_snapshot(url, redis, playwright_fetch=fetch_with_playwright)
     finally:
         await redis.aclose()
 

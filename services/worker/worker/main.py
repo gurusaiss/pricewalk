@@ -6,6 +6,9 @@ from arq.connections import RedisSettings
 
 from core.settings import get_settings
 
+from .jobs import fetch_product
+from .scheduler import enqueue_due_products
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("worker")
 
@@ -18,4 +21,8 @@ async def heartbeat(ctx: dict[str, Any]) -> None:
 
 class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    cron_jobs = [cron(heartbeat, minute=set(range(60)), run_at_startup=True)]
+    functions = [fetch_product]
+    cron_jobs = [
+        cron(heartbeat, minute=set(range(60)), run_at_startup=True),
+        cron(enqueue_due_products, minute=set(range(60)), run_at_startup=True),
+    ]

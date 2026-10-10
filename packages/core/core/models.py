@@ -76,9 +76,7 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, native_enum=False))
     plan: Mapped[str] = mapped_column(String(64), default="trial")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     tracked_items: Mapped[list["TrackedItem"]] = relationship(back_populates="user")
     product_groups: Mapped[list["ProductGroup"]] = relationship(back_populates="user")
@@ -98,9 +96,9 @@ class Product(Base):
     image: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     brand: Mapped[str | None] = mapped_column(String(255), nullable=True)
     category: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_raw_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     tracked_items: Mapped[list["TrackedItem"]] = relationship(back_populates="product")
     price_points: Mapped[list["PricePoint"]] = relationship(back_populates="product")
@@ -115,9 +113,7 @@ class ProductGroup(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="product_groups")
     tracked_items: Mapped[list["TrackedItem"]] = relationship(back_populates="group")
@@ -139,9 +135,7 @@ class TrackedItem(Base):
     )
     target_price_paise: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="tracked_items")
     product: Mapped["Product"] = relationship(back_populates="tracked_items")
