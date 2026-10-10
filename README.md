@@ -1,7 +1,8 @@
 # PriceWalk
 
 Price tracking for Indian e-commerce. See [CLAUDE.md](CLAUDE.md) for product spec and conventions,
-[PROMPTS.md](PROMPTS.md) for the milestone plan.
+[PROMPTS.md](PROMPTS.md) for the milestone plan, and [DEPLOY.md](DEPLOY.md) for going to production
+(Vercel + Fly.io + Neon + Upstash, all free tier).
 
 ## Stack (all free tiers / self-hosted)
 

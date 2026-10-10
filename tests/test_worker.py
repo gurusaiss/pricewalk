@@ -8,7 +8,7 @@ def test_heartbeat_runs() -> None:
 
 
 def test_worker_settings_has_cron_jobs() -> None:
-    assert len(WorkerSettings.cron_jobs) == 4
+    assert len(WorkerSettings.cron_jobs) == 5
 
 
 def test_worker_settings_registers_fetch_product() -> None:

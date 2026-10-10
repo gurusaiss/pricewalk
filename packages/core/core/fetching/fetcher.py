@@ -62,6 +62,7 @@ async def fetch_html(
         last_exc: Exception | None = None
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             await limiter.acquire(domain)
+            await admin.record_attempt(redis, domain)
             try:
                 response = await http_client.get(url)
             except httpx.HTTPError as exc:

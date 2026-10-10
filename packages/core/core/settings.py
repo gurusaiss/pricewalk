@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://pricewalk:pricewalk@localhost:5432/pricewalk"
     redis_url: str = "redis://localhost:6379/0"
 
+    cors_origins: str = "http://localhost:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
     jwt_access_ttl_minutes: int = 60 * 24 * 7
@@ -20,6 +26,7 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
+    admin_telegram_chat_id: str = ""
 
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@pricewalk.app"
