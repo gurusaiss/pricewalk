@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from core.db import Base
 from core.fetching import BlockedError
 from core.marketplaces import ParsedProductUrl, ProductSnapshot
-from core.models import Marketplace, PricePoint, Product
+from core.models import ChangeEvent, ChangeEventType, Marketplace, PricePoint, Product
 from core.scheduling import hash_snapshot
 from worker import jobs as jobs_module
 
@@ -151,3 +151,67 @@ async def test_fetch_product_advances_last_checked_at_on_block(
         assert stored is not None
         assert stored.last_checked_at is not None
         assert stored.last_raw_hash is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_product_records_change_event_on_price_drop(
+    session_factory: Callable[[], Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = datetime.now(UTC)
+    old_snapshot = ProductSnapshot(
+        title="Widget",
+        price_paise=10000,
+        mrp_paise=None,
+        in_stock=True,
+        seller_name=None,
+        deal_label=None,
+        image=None,
+    )
+    old_hash = hash_snapshot(old_snapshot)
+
+    with session_factory() as session:
+        product = Product(
+            marketplace=Marketplace.amazon_in,
+            external_id="B0TEST0004",
+            url="https://www.amazon.in/dp/B0TEST0004",
+            last_checked_at=now - timedelta(minutes=20),
+            last_raw_hash=old_hash,
+        )
+        session.add(product)
+        session.commit()
+        session.add(
+            PricePoint(
+                product_id=product.id,
+                ts=now - timedelta(minutes=10),
+                price_paise=10000,
+                in_stock=True,
+                raw_hash=old_hash,
+            )
+        )
+        session.commit()
+        product_id = str(product.id)
+        product_pk = product.id
+
+    new_snapshot = ProductSnapshot(
+        title="Widget",
+        price_paise=8000,
+        mrp_paise=None,
+        in_stock=True,
+        seller_name=None,
+        deal_label=None,
+        image=None,
+    )
+
+    async def fake_fetch_snapshot(url: str, redis: object, *args: object, **kwargs: object):
+        return ParsedProductUrl(Marketplace.amazon_in, "B0TEST0004", url), new_snapshot
+
+    monkeypatch.setattr(jobs_module, "fetch_snapshot", fake_fetch_snapshot)
+
+    await jobs_module.fetch_product({"redis": object()}, product_id)
+
+    with session_factory() as session:
+        events = session.query(ChangeEvent).filter_by(product_id=product_pk).all()
+        assert len(events) == 1
+        assert events[0].type == ChangeEventType.price_drop
+        assert events[0].old_value == "10000"
+        assert events[0].new_value == "8000"

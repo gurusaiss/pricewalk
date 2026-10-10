@@ -5,9 +5,10 @@ from typing import Any
 
 from sqlalchemy import select
 
+from core.change_detection import PriceState, detect_changes
 from core.db import SessionLocal
 from core.fetching import BlockedError, DomainPausedError, fetch_snapshot
-from core.models import PricePoint, Product
+from core.models import ChangeEvent, PricePoint, Product
 from core.scheduling import hash_snapshot, should_store_price_point
 
 logger = logging.getLogger("worker.jobs")
@@ -62,6 +63,28 @@ async def fetch_product(ctx: dict[str, Any], product_id: str) -> None:
                     raw_hash=new_hash,
                 )
             )
+
+            if hash_changed and last_point is not None:
+                previous_state = PriceState(
+                    price_paise=last_point.price_paise,
+                    in_stock=last_point.in_stock,
+                    deal_label=last_point.deal_label,
+                )
+                current_state = PriceState(
+                    price_paise=snapshot.price_paise,
+                    in_stock=snapshot.in_stock,
+                    deal_label=snapshot.deal_label,
+                )
+                for change in detect_changes(previous_state, current_state):
+                    session.add(
+                        ChangeEvent(
+                            product_id=product.id,
+                            ts=now,
+                            type=change.type,
+                            old_value=change.old_value,
+                            new_value=change.new_value,
+                        )
+                    )
 
         if snapshot.title:
             product.title = snapshot.title
