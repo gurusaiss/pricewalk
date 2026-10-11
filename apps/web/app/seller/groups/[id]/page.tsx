@@ -1,12 +1,11 @@
 "use client";
 
-import { ArrowLeft, Crown, ExternalLink, Package, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PriceHistoryChart } from "@/components/price-history-chart";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -141,9 +140,7 @@ export default function GroupDetailPage() {
                       <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </a>
                     {member.is_cheapest && (
-                      <Badge className="ml-2 gap-1 bg-primary/10 text-primary hover:bg-primary/10">
-                        <Crown className="size-3" /> cheapest
-                      </Badge>
+                      <span className="ml-2 text-xs text-primary">cheapest</span>
                     )}
                   </TableCell>
                   <TableCell className="capitalize text-muted-foreground">{member.kind}</TableCell>
@@ -195,9 +192,7 @@ export default function GroupDetailPage() {
       </section>
 
       <section className="mt-6 rounded-xl border bg-card p-5">
-        <h2 className="mb-4 flex items-center gap-2 font-medium">
-          <Package className="size-4 text-muted-foreground" /> Price history
-        </h2>
+        <h2 className="mb-4 font-medium">Price history</h2>
         <PriceHistoryChart
           series={history.map((s) => ({
             id: s.product_id,

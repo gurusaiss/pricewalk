@@ -87,7 +87,7 @@ export function PriceHistoryChart({ series }: { series: ChartSeries[] }) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-muted-foreground">
         <TrendingUp className="size-5 opacity-50" />
-        No price history yet — check back after the next scheduled check.
+        No price history yet. Check back after the next scheduled check.
       </div>
     );
   }

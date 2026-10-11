@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeftRight, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -57,14 +57,9 @@ export default function SettingsPage() {
             <h1 className="font-display text-xl">Account settings</h1>
           </div>
           <div className="flex flex-col gap-5 px-6 py-6">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-full bg-secondary">
-                <Mail className="size-4 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="font-medium">{user.email}</p>
-              </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Email</p>
+              <p className="font-medium">{user.email}</p>
             </div>
 
             <div className="flex items-center justify-between rounded-xl border bg-secondary/30 p-4">

@@ -60,7 +60,7 @@ export default function LoginPage() {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {step === "email"
-                ? "We'll email you a one-time code — no password to remember."
+                ? "We'll email you a one-time code. No password to remember."
                 : `We sent a 6-digit code to ${email}.`}
             </p>
           </div>

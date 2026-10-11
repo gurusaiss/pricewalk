@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingDown, TrendingUp } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -130,9 +130,7 @@ export default function BuyerProductDetailPage() {
       </section>
 
       <section className="mb-6 rounded-xl border bg-card p-5">
-        <h2 className="flex items-center gap-2 font-medium">
-          <Target className="size-4 text-muted-foreground" /> Set target price
-        </h2>
+        <h2 className="font-medium">Set target price</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           We&apos;ll send a Telegram alert the instant the price drops to or below this.
         </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, Send } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -83,11 +83,9 @@ export default function SellerAlertSettingsPage() {
         ) : (
           <div className="flex flex-col gap-6">
             <section className="rounded-xl border bg-card p-5">
-              <h2 className="flex items-center gap-2 font-medium">
-                <Send className="size-4 text-muted-foreground" /> Telegram
-              </h2>
+              <h2 className="font-medium">Telegram</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Alerts are delivered as Telegram messages — instant, no app to check.
+                Alerts come through as Telegram messages.
               </p>
               <div className="mt-4">
                 <TelegramConnectButton />
@@ -133,9 +131,7 @@ export default function SellerAlertSettingsPage() {
             </section>
 
             <section className="rounded-xl border bg-card p-5">
-              <h2 className="flex items-center gap-2 font-medium">
-                <Clock className="size-4 text-muted-foreground" /> Quiet hours (IST)
-              </h2>
+              <h2 className="font-medium">Quiet hours (IST)</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Alerts during this window are held and delivered as one digest afterward.
               </p>

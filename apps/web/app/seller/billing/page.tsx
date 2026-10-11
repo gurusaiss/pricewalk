@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CreditCard, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -62,23 +62,18 @@ export default function SellerBillingPage() {
           </div>
         ) : (
           <>
-            <div className="mb-8 flex items-center gap-3 rounded-xl border bg-card px-5 py-4">
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <CreditCard className="size-4" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Current plan</p>
-                <p className="font-medium capitalize">
-                  {billing.current_plan}
-                  {billing.subscription_status && (
-                    <span className="ml-2 font-normal capitalize text-muted-foreground">
-                      {billing.subscription_status.replaceAll("_", " ")}
-                      {billing.current_period_end &&
-                        ` · renews ${new Date(billing.current_period_end).toLocaleDateString("en-IN")}`}
-                    </span>
-                  )}
-                </p>
-              </div>
+            <div className="mb-8 rounded-xl border bg-card px-5 py-4">
+              <p className="text-sm text-muted-foreground">Current plan</p>
+              <p className="font-medium capitalize">
+                {billing.current_plan}
+                {billing.subscription_status && (
+                  <span className="ml-2 font-normal capitalize text-muted-foreground">
+                    {billing.subscription_status.replaceAll("_", " ")}
+                    {billing.current_period_end &&
+                      `, renews ${new Date(billing.current_period_end).toLocaleDateString("en-IN")}`}
+                  </span>
+                )}
+              </p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-3">
@@ -88,15 +83,10 @@ export default function SellerBillingPage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`relative flex flex-col gap-4 rounded-2xl border p-6 ${
-                      isFeatured ? "border-primary shadow-lg shadow-primary/10" : ""
+                    className={`flex flex-col gap-4 rounded-xl border p-6 ${
+                      isFeatured ? "border-foreground/30" : ""
                     } ${isCurrent ? "bg-secondary/40" : "bg-card"}`}
                   >
-                    {isFeatured && !isCurrent && (
-                      <Badge className="absolute -top-3 left-6 gap-1 bg-primary text-primary-foreground hover:bg-primary">
-                        <Sparkles className="size-3" /> Most popular
-                      </Badge>
-                    )}
                     <p className="font-medium">{plan.name}</p>
                     <p className="font-display text-3xl">
                       {plan.monthly_price_paise === 0 ? (

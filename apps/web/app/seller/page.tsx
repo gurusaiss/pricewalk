@@ -1,13 +1,12 @@
 "use client";
 
-import { ArrowUpRight, Boxes, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Boxes, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AppHeader } from "@/components/app-header";
 import { EmptyState } from "@/components/empty-state";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,7 +36,7 @@ const NAV_LINKS = [
   { href: "/seller/billing", label: "Billing" },
 ];
 
-function StatusBadge({
+function StatusLabel({
   status,
   gapPercent,
 }: {
@@ -46,20 +45,14 @@ function StatusBadge({
 }) {
   if (!status) return null;
   if (status === "match") {
-    return <Badge variant="secondary">price-matched</Badge>;
+    return <span className="text-xs text-muted-foreground">price-matched</span>;
   }
   const overpriced = status === "overpriced";
   return (
-    <Badge
-      className={
-        overpriced
-          ? "gap-1 bg-destructive/10 text-destructive hover:bg-destructive/10"
-          : "gap-1 bg-primary/10 text-primary hover:bg-primary/10"
-      }
-    >
-      {overpriced ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+    <span className={`text-xs font-medium ${overpriced ? "text-destructive" : "text-primary"}`}>
+      {overpriced ? "+" : "-"}
       {gapPercent !== null ? `${Math.abs(gapPercent)}%` : status}
-    </Badge>
+    </span>
   );
 }
 
@@ -126,7 +119,7 @@ export default function SellerDashboardPage() {
               <DialogHeader>
                 <DialogTitle>Track a product</DialogTitle>
                 <DialogDescription>
-                  Paste a link to one of your own listings — you&apos;ll add competitors next.
+                  Paste a link to one of your own listings. You&apos;ll add competitors next.
                 </DialogDescription>
               </DialogHeader>
               <form id="create-group" className="flex flex-col gap-4" onSubmit={handleCreate}>
@@ -202,7 +195,7 @@ export default function SellerDashboardPage() {
                   <span className="text-xs text-muted-foreground">
                     {group.members.length} product{group.members.length === 1 ? "" : "s"} tracked
                   </span>
-                  <StatusBadge status={group.status} gapPercent={group.gap_percent} />
+                  <StatusLabel status={group.status} gapPercent={group.gap_percent} />
                 </div>
               </Link>
             );
