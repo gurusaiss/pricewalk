@@ -1,129 +1,214 @@
 "use client";
 
+import { ArrowUpRight, Boxes, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { SectionNav } from "@/components/section-nav";
+import { AppHeader } from "@/components/app-header";
+import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createGroup, formatRupees, type Group, listGroups } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  createGroup,
+  type CurrentUser,
+  formatRupees,
+  getCurrentUser,
+  type Group,
+  listGroups,
+} from "@/lib/api";
 
-const STATUS_VARIANT: Record<string, "default" | "destructive" | "secondary"> = {
-  overpriced: "destructive",
-  underpriced: "default",
-  match: "secondary",
-};
+const NAV_LINKS = [
+  { href: "/seller", label: "Groups" },
+  { href: "/seller/alerts", label: "Alerts" },
+  { href: "/seller/settings", label: "Alert settings" },
+  { href: "/seller/billing", label: "Billing" },
+];
+
+function StatusBadge({
+  status,
+  gapPercent,
+}: {
+  status: Group["status"];
+  gapPercent: number | null;
+}) {
+  if (!status) return null;
+  if (status === "match") {
+    return <Badge variant="secondary">price-matched</Badge>;
+  }
+  const overpriced = status === "overpriced";
+  return (
+    <Badge
+      className={
+        overpriced
+          ? "gap-1 bg-destructive/10 text-destructive hover:bg-destructive/10"
+          : "gap-1 bg-primary/10 text-primary hover:bg-primary/10"
+      }
+    >
+      {overpriced ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+      {gapPercent !== null ? `${Math.abs(gapPercent)}%` : status}
+    </Badge>
+  );
+}
+
+function GroupCardSkeleton() {
+  return (
+    <div className="rounded-xl border bg-card p-5">
+      <Skeleton className="h-5 w-2/3" />
+      <Skeleton className="mt-3 h-4 w-1/3" />
+      <Skeleton className="mt-4 h-4 w-1/2" />
+    </div>
+  );
+}
 
 export default function SellerDashboardPage() {
   const [groups, setGroups] = useState<Group[] | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [open, setOpen] = useState(false);
 
   function refresh() {
     listGroups().then(setGroups);
   }
 
-  useEffect(refresh, []);
+  useEffect(() => {
+    refresh();
+    getCurrentUser().then(setUser);
+  }, []);
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
     setCreating(true);
     try {
       await createGroup(name, url);
       setName("");
       setUrl("");
+      setOpen(false);
       refresh();
+      toast.success("Product added", { description: `Now tracking "${name}".` });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add that product.");
+      toast.error(err instanceof Error ? err.message : "Could not add that product.");
     } finally {
       setCreating(false);
     }
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <div className="mb-6 flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Seller dashboard</h1>
-        <SectionNav
-          links={[
-            { href: "/seller", label: "Groups" },
-            { href: "/seller/alerts", label: "Alerts" },
-            { href: "/seller/settings", label: "Alert settings" },
-            { href: "/seller/billing", label: "Billing" },
-            { href: "/settings", label: "Account" },
-          ]}
-        />
-      </div>
+    <div className="min-h-screen">
+      <AppHeader role="seller" email={user?.email} links={NAV_LINKS} />
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl tracking-tight">Your groups</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Each group pairs your product with the competitors you&apos;re watching.
+            </p>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger className={buttonVariants()}>
+              <Plus className="size-4" /> Track a product
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Track a product</DialogTitle>
+                <DialogDescription>
+                  Paste a link to one of your own listings — you&apos;ll add competitors next.
+                </DialogDescription>
+              </DialogHeader>
+              <form id="create-group" className="flex flex-col gap-4" onSubmit={handleCreate}>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="name">Group name</Label>
+                  <Input
+                    id="name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Wireless Mouse"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="url">Your product link</Label>
+                  <Input
+                    id="url"
+                    required
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://www.amazon.in/dp/..."
+                  />
+                </div>
+              </form>
+              <DialogFooter>
+                <Button type="submit" form="create-group" disabled={creating}>
+                  {creating ? "Adding..." : "Add"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Track a product</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleCreate}>
-            <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="name">Group name</Label>
-              <Input
-                id="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Wireless Mouse"
-              />
-            </div>
-            <div className="flex flex-[2] flex-col gap-2">
-              <Label htmlFor="url">Your product link</Label>
-              <Input
-                id="url"
-                required
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.amazon.in/dp/..."
-              />
-            </div>
-            <Button type="submit" disabled={creating}>
-              {creating ? "Adding..." : "Add"}
-            </Button>
-          </form>
-          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {groups?.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            No groups yet - add your first product above.
-          </p>
+        {groups === null && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <GroupCardSkeleton key={i} />
+            ))}
+          </div>
         )}
-        {groups?.map((group) => {
-          const own = group.members.find((m) => m.kind === "own");
-          return (
-            <Link key={group.id} href={`/seller/groups/${group.id}`}>
-              <Card className="transition-colors hover:border-foreground/30">
-                <CardHeader className="flex flex-row items-start justify-between gap-2">
-                  <CardTitle className="text-base">{group.name}</CardTitle>
-                  {group.status && (
-                    <Badge variant={STATUS_VARIANT[group.status]}>
-                      {group.status}
-                      {group.gap_percent !== null ? ` ${Math.abs(group.gap_percent)}%` : ""}
-                    </Badge>
-                  )}
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  <p>Your price: {formatRupees(own?.current_price_paise)}</p>
-                  <p>{group.members.length} tracked product(s)</p>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-    </main>
+
+        {groups?.length === 0 && (
+          <EmptyState
+            icon={Boxes}
+            title="No groups yet"
+            description="Add your first product to start comparing it against competitors."
+            action={
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="size-4" /> Track a product
+              </Button>
+            }
+          />
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {groups?.map((group, i) => {
+            const own = group.members.find((m) => m.kind === "own");
+            return (
+              <Link
+                key={group.id}
+                href={`/seller/groups/${group.id}`}
+                className="card-hover animate-in-up group rounded-xl border bg-card p-5"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium">{group.name}</p>
+                  <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <p className="font-display mt-2 text-2xl">
+                  {formatRupees(own?.current_price_paise)}
+                </p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {group.members.length} product{group.members.length === 1 ? "" : "s"} tracked
+                  </span>
+                  <StatusBadge status={group.status} gapPercent={group.gap_percent} />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </main>
+    </div>
   );
 }

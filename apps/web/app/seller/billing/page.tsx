@@ -1,105 +1,147 @@
 "use client";
 
+import { Check, CreditCard, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { SectionNav } from "@/components/section-nav";
+import { AppHeader } from "@/components/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type BillingInfo, formatRupees, getBilling, subscribeToPlan } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  type BillingInfo,
+  type CurrentUser,
+  formatRupees,
+  getBilling,
+  getCurrentUser,
+  subscribeToPlan,
+} from "@/lib/api";
+
+const NAV_LINKS = [
+  { href: "/seller", label: "Groups" },
+  { href: "/seller/alerts", label: "Alerts" },
+  { href: "/seller/settings", label: "Alert settings" },
+  { href: "/seller/billing", label: "Billing" },
+];
 
 export default function SellerBillingPage() {
   const [billing, setBilling] = useState<BillingInfo | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [subscribing, setSubscribing] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getBilling().then(setBilling);
+    getCurrentUser().then(setUser);
   }, []);
 
   async function handleSubscribe(planId: string) {
     setSubscribing(planId);
-    setError(null);
     try {
       const { checkout_url } = await subscribeToPlan(planId);
       if (checkout_url) {
         window.location.href = checkout_url;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start checkout.");
+      toast.error(err instanceof Error ? err.message : "Could not start checkout.");
     } finally {
       setSubscribing(null);
     }
   }
 
-  if (!billing) return null;
-
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="mb-6 flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Billing</h1>
-        <SectionNav
-          links={[
-            { href: "/seller", label: "Groups" },
-            { href: "/seller/alerts", label: "Alerts" },
-            { href: "/seller/settings", label: "Alert settings" },
-            { href: "/seller/billing", label: "Billing" },
-            { href: "/settings", label: "Account" },
-          ]}
-        />
-      </div>
+    <div className="min-h-screen">
+      <AppHeader role="seller" email={user?.email} links={NAV_LINKS} />
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <h1 className="font-display mb-8 text-2xl tracking-tight">Billing</h1>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Current plan</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center gap-3">
-          <Badge variant="secondary" className="capitalize">
-            {billing.current_plan}
-          </Badge>
-          {billing.subscription_status && (
-            <span className="text-sm capitalize text-muted-foreground">
-              {billing.subscription_status.replaceAll("_", " ")}
-              {billing.current_period_end &&
-                ` · renews ${new Date(billing.current_period_end).toLocaleDateString("en-IN")}`}
-            </span>
-          )}
-        </CardContent>
-      </Card>
+        {!billing ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-64 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="mb-8 flex items-center gap-3 rounded-xl border bg-card px-5 py-4">
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CreditCard className="size-4" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current plan</p>
+                <p className="font-medium capitalize">
+                  {billing.current_plan}
+                  {billing.subscription_status && (
+                    <span className="ml-2 font-normal capitalize text-muted-foreground">
+                      {billing.subscription_status.replaceAll("_", " ")}
+                      {billing.current_period_end &&
+                        ` · renews ${new Date(billing.current_period_end).toLocaleDateString("en-IN")}`}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {billing.plans.map((plan) => (
-          <Card
-            key={plan.id}
-            className={plan.id === billing.current_plan ? "border-foreground" : ""}
-          >
-            <CardHeader>
-              <CardTitle>{plan.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <p className="text-2xl font-semibold">
-                {plan.monthly_price_paise === 0
-                  ? "Free"
-                  : `${formatRupees(plan.monthly_price_paise)}/mo`}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Up to {plan.competitor_limit} competitor products
-              </p>
-              {plan.id !== "trial" && plan.id !== billing.current_plan && (
-                <Button disabled={subscribing === plan.id} onClick={() => handleSubscribe(plan.id)}>
-                  {subscribing === plan.id ? "Starting checkout..." : "Upgrade"}
-                </Button>
-              )}
-              {plan.id === billing.current_plan && (
-                <Badge variant="outline" className="w-fit">
-                  Current plan
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
-    </main>
+            <div className="grid gap-5 sm:grid-cols-3">
+              {billing.plans.map((plan) => {
+                const isCurrent = plan.id === billing.current_plan;
+                const isFeatured = plan.id === "starter";
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative flex flex-col gap-4 rounded-2xl border p-6 ${
+                      isFeatured ? "border-primary shadow-lg shadow-primary/10" : ""
+                    } ${isCurrent ? "bg-secondary/40" : "bg-card"}`}
+                  >
+                    {isFeatured && !isCurrent && (
+                      <Badge className="absolute -top-3 left-6 gap-1 bg-primary text-primary-foreground hover:bg-primary">
+                        <Sparkles className="size-3" /> Most popular
+                      </Badge>
+                    )}
+                    <p className="font-medium">{plan.name}</p>
+                    <p className="font-display text-3xl">
+                      {plan.monthly_price_paise === 0 ? (
+                        "Free"
+                      ) : (
+                        <>
+                          {formatRupees(plan.monthly_price_paise)}
+                          <span className="font-sans text-sm text-muted-foreground">/mo</span>
+                        </>
+                      )}
+                    </p>
+                    <ul className="flex flex-1 flex-col gap-2 text-sm text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary" />
+                        Up to {plan.competitor_limit} competitor products
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary" />
+                        Checked every 15 minutes
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="size-4 text-primary" />
+                        Telegram alerts
+                      </li>
+                    </ul>
+                    {isCurrent ? (
+                      <Badge variant="outline" className="w-fit">
+                        Current plan
+                      </Badge>
+                    ) : plan.id !== "trial" ? (
+                      <Button
+                        variant={isFeatured ? "default" : "outline"}
+                        disabled={subscribing === plan.id}
+                        onClick={() => handleSubscribe(plan.id)}
+                      >
+                        {subscribing === plan.id ? "Starting checkout..." : "Upgrade"}
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
   );
 }
