@@ -9,8 +9,9 @@ COPY pyproject.toml ./
 COPY packages/core ./packages/core
 COPY services/api ./services/api
 COPY services/worker ./services/worker
+COPY infra/start-api.sh ./start-api.sh
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e . && chmod +x ./start-api.sh
 
 # render.yaml's dockerCommand picks which of api/worker actually runs per
 # service; this default CMD only matters if a service is started without one.
