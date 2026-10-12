@@ -75,6 +75,8 @@ class User(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     phone: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
+    # Nullable: users created via OTP/Google sign-in have no password.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Nullable until the user picks a role in onboarding (first login lands
     # with role=None and the frontend routes them to the role picker).
     role: Mapped[UserRole | None] = mapped_column(Enum(UserRole, native_enum=False), nullable=True)

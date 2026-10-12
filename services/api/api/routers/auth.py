@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
@@ -10,12 +10,14 @@ from core.auth import (
     create_access_token,
     generate_otp,
     get_current_user,
+    hash_password,
     store_otp,
     verify_google_id_token,
     verify_otp,
+    verify_password,
 )
 from core.db import get_db
-from core.email import BrevoClient, SmtpClient
+from core.email import BrevoClient, MailjetClient, SmtpClient
 from core.models import User, UserRole
 from core.settings import get_settings
 
@@ -25,6 +27,16 @@ router = APIRouter(prefix="/auth")
 def _redis() -> Redis:
     settings = get_settings()
     return Redis.from_url(settings.redis_url, decode_responses=True)
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class OtpRequest(BaseModel):
@@ -77,6 +89,37 @@ def _get_or_create_user(db: Session, email: str) -> User:
     return user
 
 
+@router.post("/register")
+def register(
+    body: RegisterRequest, response: Response, db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    email = body.email.lower()
+    user = db.query(User).filter_by(email=email).one_or_none()
+    if user is not None and user.password_hash is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+
+    if user is None:
+        user = User(email=email, role=None)
+        db.add(user)
+    user.password_hash = hash_password(body.password)
+    db.commit()
+
+    _set_session_cookie(response, user)
+    return _user_payload(user)
+
+
+@router.post("/login")
+def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> dict[str, Any]:
+    user = db.query(User).filter_by(email=body.email.lower()).one_or_none()
+    if user is None or user.password_hash is None or not verify_password(
+        body.password, user.password_hash
+    ):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+
+    _set_session_cookie(response, user)
+    return _user_payload(user)
+
+
 @router.post("/otp/request")
 async def request_otp(body: OtpRequest) -> dict[str, str]:
     settings = get_settings()
@@ -88,8 +131,12 @@ async def request_otp(body: OtpRequest) -> dict[str, str]:
     finally:
         await redis.aclose()
 
-    email_client: BrevoClient | SmtpClient | None = None
-    if settings.smtp_host:
+    email_client: MailjetClient | BrevoClient | SmtpClient | None = None
+    if settings.mailjet_api_key:
+        email_client = MailjetClient(
+            settings.mailjet_api_key, settings.mailjet_api_secret, settings.mailjet_sender_email
+        )
+    elif settings.smtp_host:
         email_client = SmtpClient(
             settings.smtp_host,
             settings.smtp_port,

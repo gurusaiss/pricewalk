@@ -9,6 +9,10 @@ class SmtpClient:
     """Sends mail through any SMTP server (e.g. Gmail's smtp.gmail.com:465
     with an app password) — a free alternative to Brevo when its signup
     requires phone verification you can't complete.
+
+    Note: Render's free web services block outbound SMTP ports entirely
+    (25/465/587), so this won't work when deployed there — use
+    MailjetClient instead in that case.
     """
 
     def __init__(
@@ -43,6 +47,37 @@ class SmtpClient:
 
     async def send_email(self, to_email: str, subject: str, text: str) -> bool:
         return await asyncio.to_thread(self._send_sync, to_email, subject, text)
+
+
+class MailjetClient:
+    """Thin wrapper over Mailjet's Send API v3.1 (HTTPS, not SMTP - works on
+    hosts like Render that block outbound SMTP ports). Free tier: 6,000
+    emails/month, no card, signup only asks for email verification.
+    """
+
+    def __init__(
+        self, api_key: str, api_secret: str, sender_email: str, sender_name: str = "PriceWalk"
+    ) -> None:
+        self._auth = (api_key, api_secret)
+        self._sender = {"Email": sender_email, "Name": sender_name}
+
+    async def send_email(self, to_email: str, subject: str, text: str) -> bool:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "https://api.mailjet.com/v3.1/send",
+                auth=self._auth,
+                json={
+                    "Messages": [
+                        {
+                            "From": self._sender,
+                            "To": [{"Email": to_email}],
+                            "Subject": subject,
+                            "TextPart": text,
+                        }
+                    ]
+                },
+            )
+        return response.status_code in (200, 201)
 
 
 class BrevoClient:

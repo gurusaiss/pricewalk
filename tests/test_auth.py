@@ -32,6 +32,104 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     return redis
 
 
+def test_register_creates_user_and_sets_cookie() -> None:
+    session, engine = _make_sqlite_session()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/auth/register", json={"email": "newpw@example.com", "password": "correcthorse"}
+            )
+            assert response.status_code == 200
+            body = response.json()
+            assert body["email"] == "newpw@example.com"
+            assert body["role"] is None
+            assert COOKIE_NAME in response.cookies
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        engine.dispose()
+
+
+def test_register_rejects_duplicate_email() -> None:
+    session, engine = _make_sqlite_session()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app) as client:
+            client.post(
+                "/auth/register", json={"email": "dup@example.com", "password": "correcthorse"}
+            )
+            response = client.post(
+                "/auth/register", json={"email": "dup@example.com", "password": "anotherpass"}
+            )
+            assert response.status_code == 409
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        engine.dispose()
+
+
+def test_register_rejects_short_password() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/auth/register", json={"email": "short@example.com", "password": "abc123"}
+        )
+        assert response.status_code == 422
+
+
+def test_login_with_correct_password_sets_cookie() -> None:
+    session, engine = _make_sqlite_session()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app) as client:
+            client.post(
+                "/auth/register", json={"email": "loginme@example.com", "password": "correcthorse"}
+            )
+            response = client.post(
+                "/auth/login", json={"email": "loginme@example.com", "password": "correcthorse"}
+            )
+            assert response.status_code == 200
+            assert response.json()["email"] == "loginme@example.com"
+            assert COOKIE_NAME in response.cookies
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        engine.dispose()
+
+
+def test_login_rejects_wrong_password() -> None:
+    session, engine = _make_sqlite_session()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app) as client:
+            client.post(
+                "/auth/register", json={"email": "wrongpw@example.com", "password": "correcthorse"}
+            )
+            response = client.post(
+                "/auth/login", json={"email": "wrongpw@example.com", "password": "wrongpassword"}
+            )
+            assert response.status_code == 401
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        engine.dispose()
+
+
+def test_login_rejects_unknown_email() -> None:
+    session, engine = _make_sqlite_session()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/auth/login", json={"email": "nosuchuser@example.com", "password": "whatever1"}
+            )
+            assert response.status_code == 401
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        engine.dispose()
+
+
 def test_otp_request_then_verify_creates_user_and_sets_cookie(
     fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ) -> None:

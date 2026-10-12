@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "playwright>=1.47",
     "pyjwt>=2.9",
+    "bcrypt>=4.2",
     "google-auth>=2.35",
     "email-validator>=2.2",
     "sentry-sdk[fastapi]>=2.17",

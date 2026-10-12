@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     telegram_bot_username: str = ""
     admin_telegram_chat_id: str = ""
 
+    mailjet_api_key: str = ""
+    mailjet_api_secret: str = ""
+    mailjet_sender_email: str = "noreply@pricewalk.app"
+
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@pricewalk.app"
 

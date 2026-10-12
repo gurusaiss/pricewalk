@@ -22,15 +22,18 @@ Create these first:
 | Render | https://render.com | Hosting for the API + worker | No |
 | Vercel | https://vercel.com | Hosting for the Next.js site | No |
 | Telegram | message [@BotFather](https://t.me/BotFather) | A bot token + username (alerts) | No |
-| Gmail (or Brevo) | your existing Gmail account | OTP email sending | No |
 | UptimeRobot | https://uptimerobot.com | Keeps Render services awake | No |
 | Razorpay | https://dashboard.razorpay.com | Test API keys (billing) | No |
 
-Google sign-in (Google Cloud Console) and Brevo are both **skipped** in this
-walkthrough — Google Cloud now gates OAuth client creation behind its free
-trial's card requirement, and Brevo now requires phone verification. Neither
-is required: email+OTP login (via Gmail SMTP) is the primary, fully
-independent auth path. Add either back later if you want to.
+**Login is email + password**, not email + OTP. Every email-sending option we
+tried (Brevo, Google Cloud OAuth, Mailjet, SendPulse) gated signup behind a
+phone number or card, and Render blocks outbound SMTP on its free tier
+entirely (see the note below) — so email-based OTP login isn't practical to
+stand up for free right now. The backend still has OTP/email-sending code in
+place (untouched, still tested) for whenever a working provider is found;
+the frontend just uses `/auth/register` and `/auth/login` for now. Google
+sign-in is also **skipped** for the same card-gate reason. Neither blocks
+launch — password auth is fully independent and already live.
 
 ## 1. Database — Neon
 
@@ -66,28 +69,16 @@ independent auth path. Add either back later if you want to.
    curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://pricewalk-api.onrender.com/telegram/webhook"
    ```
 
-## 4. OTP emails — Gmail SMTP (or Brevo)
+## 4. (Skipped) Email sending for OTP login
 
-**Gmail SMTP** (recommended — no signup, no phone verification, uses your
-own Gmail account):
-1. Turn on 2-Step Verification on your Google account if it isn't already
-   (Google Account > Security).
-2. Google Account > Security > 2-Step Verification > App passwords > create
-   one for "Mail". Copy the 16-character code, **with the spaces removed**.
-3. Set:
-   - `SMTP_HOST=smtp.gmail.com`
-   - `SMTP_PORT=465`
-   - `SMTP_USERNAME=` your Gmail address
-   - `SMTP_PASSWORD=` the app password from step 2 (no spaces)
-   - `SMTP_SENDER_EMAIL=` your Gmail address
-
-   Gmail's free tier allows ~500 emails/day, plenty for OTP logins at launch
-   scale.
-
-**Brevo** is still supported as an alternative if you can complete its phone
-verification (SMTP settings take priority over Brevo when both are set) —
-create an account, go to SMTP & API > API Keys, generate `BREVO_API_KEY`, and
-set `BREVO_SENDER_EMAIL` to any address.
+Not needed — login uses email + password instead (see the note above). If
+you later want OTP login or password-reset emails, three clients already
+exist in `packages/core/core/email.py` (`MailjetClient`, `BrevoClient`,
+`SmtpClient`) — none usable for free without a phone/card, and Render blocks
+outbound SMTP on free services regardless (per Render's own changelog: free
+web services no longer allow outbound traffic to SMTP ports). Revisit once
+a free, phone-free HTTP email API turns up, or once you're on
+a paid Render plan (SMTP works there).
 
 ## 5. API + worker — Render
 
@@ -107,8 +98,6 @@ Services, accepts it).
    values):
    - `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` (`openssl rand -hex 32`,
      must be identical on both services and on Vercel)
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
-     `SMTP_SENDER_EMAIL` (or `BREVO_API_KEY`/`BREVO_SENDER_EMAIL`)
    - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `ADMIN_TELEGRAM_CHAT_ID`
    - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`,
      `RAZORPAY_PLAN_ID_STARTER`, `RAZORPAY_PLAN_ID_GROWTH` (can be added
@@ -117,7 +106,8 @@ Services, accepts it).
    - `SENTRY_DSN` (optional)
    - On `pricewalk-api` only: `CORS_ORIGINS` — set to your Vercel domain
      once you know it (step 7), e.g. `https://pricewalk.vercel.app`
-   - `GOOGLE_CLIENT_ID` can stay unset — Google sign-in is skipped.
+   - `GOOGLE_CLIENT_ID`, `MAILJET_*`, `BREVO_*`, `SMTP_*` can all stay
+     unset — see step 4.
 4. Deploy. Render builds the shared Docker image once and starts both
    services. The API's `dockerCommand` runs `alembic upgrade head`
    automatically before `uvicorn` starts, each deploy.

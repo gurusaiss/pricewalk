@@ -25,17 +25,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function requestOtp(email: string) {
-  return apiFetch<{ status: string }>("/auth/otp/request", {
+export function register(email: string, password: string) {
+  return apiFetch<CurrentUser>("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
-export function verifyOtp(email: string, code: string) {
-  return apiFetch<CurrentUser>("/auth/otp/verify", {
+export function login(email: string, password: string) {
+  return apiFetch<CurrentUser>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, code }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
