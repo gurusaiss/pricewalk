@@ -1,34 +1,51 @@
 # Deploying PriceWalk
 
-Everything below uses free tiers: **Vercel** (web), **Fly.io** (api + worker),
-**Neon** (Postgres), **Upstash** (Redis). Total cost: ₹0/month at this scale.
+Everything below uses free tiers: **Vercel** (web), **Render** (api + worker),
+**Neon** (Postgres), **Upstash** (Redis). Total cost: ₹0/month at this scale,
+and no card is required for any of these four.
+
+> We originally targeted Fly.io, but Fly now requires a payment method on
+> file even for free-tier usage. Render's free Web Service plan needs no
+> card. The trade-off: Render's free services spin down after ~15 minutes of
+> no traffic, so step 8's uptime monitor isn't optional here — it's what
+> keeps the API and worker awake. A cold start adds a few seconds of delay
+> the first time either service wakes up.
 
 ## 0. Accounts you need
 
-Create these first (all free, no credit card required for the tiers we use):
+Create these first:
 
-| Service | URL | What you'll get |
-|---|---|---|
-| Neon | https://neon.tech | A Postgres connection string |
-| Upstash | https://upstash.com | A Redis connection string |
-| Fly.io | https://fly.io | Hosting for the API + worker |
-| Vercel | https://vercel.com | Hosting for the Next.js site |
-| Telegram | message [@BotFather](https://t.me/BotFather) | A bot token + username (alerts) |
-| Google Cloud Console | https://console.cloud.google.com | An OAuth 2.0 Client ID (Google sign-in) |
-| Brevo | https://www.brevo.com | An API key (OTP emails) |
-| Razorpay | https://dashboard.razorpay.com | Test API keys (billing) |
+| Service | URL | What you'll get | Card needed? |
+|---|---|---|---|
+| Neon | https://neon.tech | A Postgres connection string | No |
+| Upstash | https://upstash.com | A Redis connection string | No |
+| Render | https://render.com | Hosting for the API + worker | No |
+| Vercel | https://vercel.com | Hosting for the Next.js site | No |
+| Telegram | message [@BotFather](https://t.me/BotFather) | A bot token + username (alerts) | No |
+| Gmail (or Brevo) | your existing Gmail account | OTP email sending | No |
+| UptimeRobot | https://uptimerobot.com | Keeps Render services awake | No |
+| Razorpay | https://dashboard.razorpay.com | Test API keys (billing) | No |
+
+Google sign-in (Google Cloud Console) and Brevo are both **skipped** in this
+walkthrough — Google Cloud now gates OAuth client creation behind its free
+trial's card requirement, and Brevo now requires phone verification. Neither
+is required: email+OTP login (via Gmail SMTP) is the primary, fully
+independent auth path. Add either back later if you want to.
 
 ## 1. Database — Neon
 
-1. Create a project. Copy the connection string it gives you (it looks like
+1. On neon.tech, create a project. Choose **Postgres database** only (skip
+   Object storage, Functions, AI gateway, Neon Auth — none of those are used;
+   our own OTP/JWT auth is already built and tested).
+2. Copy the connection string it gives you (it looks like
    `postgresql://user:pass@ep-xxx.neon.tech/dbname?sslmode=require`).
-2. Rewrite it for our driver: replace `postgresql://` with
+3. Rewrite it for our driver: replace `postgresql://` with
    `postgresql+psycopg://`. This is your `DATABASE_URL`.
 
 ## 2. Redis — Upstash
 
 1. Create a Redis database (regional, not global — pick a region close to
-   Fly's `bom` region or your Fly app's region).
+   Render's Singapore region, e.g. `ap-southeast-1`).
 2. Copy the "Redis URL" (`rediss://...`, note the double `s` — TLS). This is
    your `REDIS_URL`.
 
@@ -40,132 +57,108 @@ Create these first (all free, no credit card required for the tiers we use):
 2. To get your own chat id for the daily admin report
    (`ADMIN_TELEGRAM_CHAT_ID`): message your new bot once, then open
    `https://api.telegram.org/bot<token>/getUpdates` in a browser and read
-   `message.chat.id` from the JSON.
+   `message.chat.id` from the JSON. (If you get `{"ok":true,"result":[]}`,
+   send the bot a fresh message and reload the URL — it only shows updates
+   received since the last call.)
 3. After deploying the API (step 6), register the webhook so `/start` deep
    links work:
    ```bash
-   curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://pricewalk-api.fly.dev/telegram/webhook"
+   curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://pricewalk-api.onrender.com/telegram/webhook"
    ```
 
-## 4. Google sign-in
+## 4. OTP emails — Gmail SMTP (or Brevo)
 
-1. In Google Cloud Console, create an OAuth 2.0 Client ID (Web application).
-2. Authorized JavaScript origins: your Vercel domain (e.g.
-   `https://pricewalk.vercel.app`) and `http://localhost:3000` for local dev.
-3. Copy the Client ID — it's both `GOOGLE_CLIENT_ID` (API) and
-   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web). The Client Secret isn't needed for
-   this ID-token flow.
-
-## 5. OTP emails — Brevo or Gmail SMTP
-
-**Option A — Brevo** (if you can complete its phone verification):
-1. Create an account, go to SMTP & API > API Keys, generate one
-   (`BREVO_API_KEY`).
-2. Set `BREVO_SENDER_EMAIL` to any address — Brevo's free tier sends to any
-   recipient without domain verification (see CLAUDE.md's stack notes).
-
-**Option B — Gmail SMTP** (no phone verification, uses your own Gmail
-account; takes priority over Brevo when `SMTP_HOST` is set):
-1. On your Google account, turn on 2-Step Verification if not already on
-   (Security settings).
+**Gmail SMTP** (recommended — no signup, no phone verification, uses your
+own Gmail account):
+1. Turn on 2-Step Verification on your Google account if it isn't already
+   (Google Account > Security).
 2. Google Account > Security > 2-Step Verification > App passwords > create
-   one for "Mail". Copy the 16-character code.
+   one for "Mail". Copy the 16-character code, **with the spaces removed**.
 3. Set:
    - `SMTP_HOST=smtp.gmail.com`
    - `SMTP_PORT=465`
    - `SMTP_USERNAME=` your Gmail address
-   - `SMTP_PASSWORD=` the app password from step 2
+   - `SMTP_PASSWORD=` the app password from step 2 (no spaces)
    - `SMTP_SENDER_EMAIL=` your Gmail address
 
    Gmail's free tier allows ~500 emails/day, plenty for OTP logins at launch
    scale.
 
-## 6. API + worker — Fly.io
+**Brevo** is still supported as an alternative if you can complete its phone
+verification (SMTP settings take priority over Brevo when both are set) —
+create an account, go to SMTP & API > API Keys, generate `BREVO_API_KEY`, and
+set `BREVO_SENDER_EMAIL` to any address.
 
-```bash
-curl -L https://fly.io/install.sh | sh   # install flyctl
-fly auth login
-fly launch --no-deploy --copy-config --config infra/fly.toml
-```
+## 5. API + worker — Render
 
-Set secrets (never commit these — this replaces `.env` in production):
+Render deploys both services from the `infra/render.yaml` Blueprint in this
+repo (one Dockerfile, two services — `pricewalk-api` and `pricewalk-worker`,
+each on the free Web Service plan; the worker runs a tiny health endpoint
+alongside the arq loop so Render's free tier, which only offers Web
+Services, accepts it).
 
-```bash
-fly secrets set \
-  DATABASE_URL="postgresql+psycopg://..." \
-  REDIS_URL="rediss://..." \
-  CORS_ORIGINS="https://pricewalk.vercel.app" \
-  JWT_SECRET="$(openssl rand -hex 32)" \
-  GOOGLE_CLIENT_ID="..." \
-  BREVO_API_KEY="..." \
-  BREVO_SENDER_EMAIL="noreply@yourdomain.com" \
-  SMTP_HOST="smtp.gmail.com" \
-  SMTP_PORT="465" \
-  SMTP_USERNAME="you@gmail.com" \
-  SMTP_PASSWORD="..." \
-  SMTP_SENDER_EMAIL="you@gmail.com" \
-  TELEGRAM_BOT_TOKEN="..." \
-  TELEGRAM_BOT_USERNAME="..." \
-  ADMIN_TELEGRAM_CHAT_ID="..." \
-  RAZORPAY_KEY_ID="..." \
-  RAZORPAY_KEY_SECRET="..." \
-  RAZORPAY_WEBHOOK_SECRET="..." \
-  RAZORPAY_PLAN_ID_STARTER="..." \
-  RAZORPAY_PLAN_ID_GROWTH="..." \
-  AFFILIATE_TAG_AMAZON="..." \
-  AFFILIATE_TAG_FLIPKART="..." \
-  SENTRY_DSN="..."
-```
+1. Push this repo to GitHub if you haven't already.
+2. On the Render dashboard: **New > Blueprint**, connect the repo, and point
+   it at `infra/render.yaml`. Render reads the file and proposes both
+   services — confirm.
+3. Before the first deploy, set the secret environment variables Render
+   left blank (`sync: false` in the blueprint means "prompt me, don't
+   commit it") — on **each** service (API and worker need the matching
+   values):
+   - `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` (`openssl rand -hex 32`,
+     must be identical on both services and on Vercel)
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
+     `SMTP_SENDER_EMAIL` (or `BREVO_API_KEY`/`BREVO_SENDER_EMAIL`)
+   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `ADMIN_TELEGRAM_CHAT_ID`
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`,
+     `RAZORPAY_PLAN_ID_STARTER`, `RAZORPAY_PLAN_ID_GROWTH` (can be added
+     later once you've done step 9)
+   - `AFFILIATE_TAG_AMAZON`, `AFFILIATE_TAG_FLIPKART` (optional)
+   - `SENTRY_DSN` (optional)
+   - On `pricewalk-api` only: `CORS_ORIGINS` — set to your Vercel domain
+     once you know it (step 7), e.g. `https://pricewalk.vercel.app`
+   - `GOOGLE_CLIENT_ID` can stay unset — Google sign-in is skipped.
+4. Deploy. Render builds the shared Docker image once and starts both
+   services. The API's `dockerCommand` runs `alembic upgrade head`
+   automatically before `uvicorn` starts, each deploy.
+5. Verify: `curl https://pricewalk-api.onrender.com/health` should return
+   `{"status": "ok"}` (use your actual service name/domain from the Render
+   dashboard).
 
-Deploy (this also runs `alembic upgrade head` via `release_command` in
-`infra/fly.toml`, before the new version takes traffic):
-
-```bash
-fly deploy --config infra/fly.toml
-```
-
-Scale the worker process to 1 machine (Fly's default `fly launch` only starts
-the first process group it finds):
-
-```bash
-fly scale count api=1 worker=1
-```
-
-Verify: `curl https://pricewalk-api.fly.dev/health` should return
-`{"status": "ok"}`.
-
-## 7. Web — Vercel
+## 6. Web — Vercel
 
 1. Import the GitHub repo into Vercel.
 2. Set **Root Directory** to `apps/web` in the project settings.
 3. Add environment variables:
-   - `NEXT_PUBLIC_API_URL` = `https://pricewalk-api.fly.dev`
-   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` = (from step 4)
-   - `JWT_SECRET` = **the exact same value** set on Fly (middleware.ts
+   - `NEXT_PUBLIC_API_URL` = `https://pricewalk-api.onrender.com`
+   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` = (leave unset — Google sign-in is
+     skipped)
+   - `JWT_SECRET` = **the exact same value** set on Render (middleware.ts
      verifies the same cookie the API issues)
 4. Deploy. Vercel builds and hosts the Next.js app with zero other config.
-5. Make sure `CORS_ORIGINS` on Fly (step 6) matches this exact Vercel domain
-   — it's read from the environment, no code change needed. Update it with
-   `fly secrets set CORS_ORIGINS="https://your-domain.vercel.app"` if you set
-   it before knowing the final domain.
+5. Make sure `CORS_ORIGINS` on the Render API service matches this exact
+   Vercel domain — update it in the Render dashboard if you set it before
+   knowing the final domain (triggers a redeploy automatically).
 
-## 8. Uptime check
+## 7. Uptime check — required on Render's free tier
 
-Fly's own `http_checks` in `infra/fly.toml` restarts the API if `/health`
-fails, but for an external alert when the whole app is down, add a free
-[UptimeRobot](https://uptimerobot.com) monitor:
+Render's free Web Services spin down after ~15 minutes of no inbound
+traffic. Pinging both services keeps them awake and gives you an external
+alert if the app actually goes down. Add two free
+[UptimeRobot](https://uptimerobot.com) monitors:
 
-- Monitor type: HTTP(s)
-- URL: `https://pricewalk-api.fly.dev/health`
-- Interval: 5 minutes (free tier)
+- Monitor type: HTTP(s), URL: `https://pricewalk-api.onrender.com/health`,
+  interval: 5 minutes
+- Monitor type: HTTP(s), URL: `https://pricewalk-worker.onrender.com/`,
+  interval: 5 minutes
 
-## 9. Razorpay webhook
+## 8. Razorpay webhook
 
 In the Razorpay dashboard: Settings > Webhooks > Add New Webhook.
 
-- URL: `https://pricewalk-api.fly.dev/webhooks/razorpay`
+- URL: `https://pricewalk-api.onrender.com/webhooks/razorpay`
 - Secret: generate one and set it as both the webhook secret in the
-  dashboard and `RAZORPAY_WEBHOOK_SECRET` in Fly secrets.
+  dashboard and `RAZORPAY_WEBHOOK_SECRET` on the Render API service.
 - Active events: `subscription.activated`, `subscription.charged`,
   `subscription.pending`, `subscription.halted`, `subscription.cancelled`,
   `subscription.completed`.
@@ -178,15 +171,14 @@ Also create the two paid plans (Subscriptions > Plans) and put their ids in
 - **Structured JSON logs** (`core/logging_config.py`) on both api and
   worker — tokens/phone/email fields are redacted automatically.
 - **Sentry** (`core/sentry.py`) — a no-op until `SENTRY_DSN` is set.
-- **DB migrations on release** — `infra/fly.toml`'s `release_command` runs
-  `alembic upgrade head` before every deploy.
+- **DB migrations on deploy** — run automatically as part of the API
+  service's start command, before `uvicorn` takes traffic.
 - **Daily admin report** (worker cron, 8 AM IST) — products tracked, fetch
   success rate per domain, alerts sent, blocks detected, sent to
   `ADMIN_TELEGRAM_CHAT_ID`.
 
 ## Redeploying after code changes
 
-```bash
-fly deploy --config infra/fly.toml   # api + worker
-# Vercel redeploys automatically on push to the connected branch.
-```
+Render redeploys both services automatically on every push to the
+connected branch. Vercel does the same for the frontend. No manual command
+needed for either.

@@ -12,8 +12,6 @@ COPY services/worker ./services/worker
 
 RUN pip install --no-cache-dir -e .
 
-EXPOSE 8000
-
-# fly.toml's [processes] picks which of api/worker actually runs per machine;
-# this default CMD only matters if a process is started without one.
+# render.yaml's dockerCommand picks which of api/worker actually runs per
+# service; this default CMD only matters if a service is started without one.
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
