@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@pricewalk.app"
 
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_sender_email: str = ""
+
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""

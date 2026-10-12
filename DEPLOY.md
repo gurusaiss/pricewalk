@@ -56,12 +56,29 @@ Create these first (all free, no credit card required for the tiers we use):
    `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (web). The Client Secret isn't needed for
    this ID-token flow.
 
-## 5. Brevo (OTP emails)
+## 5. OTP emails — Brevo or Gmail SMTP
 
+**Option A — Brevo** (if you can complete its phone verification):
 1. Create an account, go to SMTP & API > API Keys, generate one
    (`BREVO_API_KEY`).
 2. Set `BREVO_SENDER_EMAIL` to any address — Brevo's free tier sends to any
    recipient without domain verification (see CLAUDE.md's stack notes).
+
+**Option B — Gmail SMTP** (no phone verification, uses your own Gmail
+account; takes priority over Brevo when `SMTP_HOST` is set):
+1. On your Google account, turn on 2-Step Verification if not already on
+   (Security settings).
+2. Google Account > Security > 2-Step Verification > App passwords > create
+   one for "Mail". Copy the 16-character code.
+3. Set:
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=465`
+   - `SMTP_USERNAME=` your Gmail address
+   - `SMTP_PASSWORD=` the app password from step 2
+   - `SMTP_SENDER_EMAIL=` your Gmail address
+
+   Gmail's free tier allows ~500 emails/day, plenty for OTP logins at launch
+   scale.
 
 ## 6. API + worker — Fly.io
 
@@ -82,6 +99,11 @@ fly secrets set \
   GOOGLE_CLIENT_ID="..." \
   BREVO_API_KEY="..." \
   BREVO_SENDER_EMAIL="noreply@yourdomain.com" \
+  SMTP_HOST="smtp.gmail.com" \
+  SMTP_PORT="465" \
+  SMTP_USERNAME="you@gmail.com" \
+  SMTP_PASSWORD="..." \
+  SMTP_SENDER_EMAIL="you@gmail.com" \
   TELEGRAM_BOT_TOKEN="..." \
   TELEGRAM_BOT_USERNAME="..." \
   ADMIN_TELEGRAM_CHAT_ID="..." \

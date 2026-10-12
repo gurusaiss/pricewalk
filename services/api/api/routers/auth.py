@@ -15,7 +15,7 @@ from core.auth import (
     verify_otp,
 )
 from core.db import get_db
-from core.email import BrevoClient
+from core.email import BrevoClient, SmtpClient
 from core.models import User, UserRole
 from core.settings import get_settings
 
@@ -88,9 +88,20 @@ async def request_otp(body: OtpRequest) -> dict[str, str]:
     finally:
         await redis.aclose()
 
-    if settings.brevo_api_key:
-        client = BrevoClient(settings.brevo_api_key, settings.brevo_sender_email)
-        await client.send_email(
+    email_client: BrevoClient | SmtpClient | None = None
+    if settings.smtp_host:
+        email_client = SmtpClient(
+            settings.smtp_host,
+            settings.smtp_port,
+            settings.smtp_username,
+            settings.smtp_password,
+            settings.smtp_sender_email or settings.smtp_username,
+        )
+    elif settings.brevo_api_key:
+        email_client = BrevoClient(settings.brevo_api_key, settings.brevo_sender_email)
+
+    if email_client is not None:
+        await email_client.send_email(
             body.email,
             "Your PriceWalk code",
             f"Your login code is {code}. It expires in 5 minutes.",
