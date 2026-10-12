@@ -114,15 +114,12 @@ export default function SellerAlertSettingsPage() {
                     <button
                       key={type.value}
                       type="button"
-                      disabled={allEventTypesEnabled}
                       onClick={() => toggleEventType(type.value)}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-default disabled:opacity-40 ${
-                        active && !allEventTypesEnabled
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "hover:bg-secondary"
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        active ? "border-primary bg-primary/10 text-primary" : "hover:bg-secondary"
                       }`}
                     >
-                      {active && !allEventTypesEnabled && <Check className="size-3.5" />}
+                      {active && <Check className="size-3.5" />}
                       {type.label}
                     </button>
                   );

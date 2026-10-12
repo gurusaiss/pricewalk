@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Link2 } from "lucide-react";
+import { Heart, Link2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,6 +18,7 @@ import {
   formatRupees,
   getCurrentUser,
   listWishlist,
+  removeFromWishlist,
   type WishlistItem,
 } from "@/lib/api";
 
@@ -29,11 +30,27 @@ export default function BuyerDashboardPage() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     listWishlist().then(setWishlist);
     getCurrentUser().then(setUser);
   }, []);
+
+  async function handleRemove(event: React.MouseEvent, trackedItemId: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    setRemovingId(trackedItemId);
+    try {
+      await removeFromWishlist(trackedItemId);
+      setWishlist((prev) => prev?.filter((w) => w.tracked_item_id !== trackedItemId) ?? null);
+      toast.success("Removed from wishlist");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not remove that item.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   async function handleAdd(event: React.FormEvent) {
     event.preventDefault();
@@ -122,6 +139,16 @@ export default function BuyerDashboardPage() {
                 </p>
               </div>
               {item.in_stock === false && <Badge variant="destructive">Out of stock</Badge>}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={removingId === item.tracked_item_id}
+                onClick={(e) => handleRemove(e, item.tracked_item_id)}
+                aria-label="Remove from wishlist"
+                className="shrink-0"
+              >
+                <X className="size-4" />
+              </Button>
             </Link>
           ))}
         </div>
