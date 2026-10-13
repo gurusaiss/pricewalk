@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     groq_api_key: str = ""
-    groq_model: str = "llama-3.1-8b-instant"
+    # llama-3.1-8b-instant was retired from Groq's free tier 2026-08-16;
+    # openai/gpt-oss-20b is Groq's documented replacement for it.
+    groq_model: str = "openai/gpt-oss-20b"
 
 
 @lru_cache
