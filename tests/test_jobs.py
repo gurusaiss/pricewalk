@@ -125,6 +125,52 @@ async def test_fetch_product_skips_duplicate_price_point(
 
 
 @pytest.mark.asyncio
+async def test_fetch_product_does_not_store_a_fabricated_zero_price(
+    session_factory: Callable[[], Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A snapshot with no parseable price (e.g. a JS-rendered price widget,
+    or a parsing miss) must not be recorded as price_paise=0 - that would
+    corrupt price history and could trigger a false "price dropped to zero"
+    alert.
+    """
+    with session_factory() as session:
+        product = Product(
+            marketplace=Marketplace.amazon_in,
+            external_id="B0TEST0005",
+            url="https://www.amazon.in/dp/B0TEST0005",
+        )
+        session.add(product)
+        session.commit()
+        product_id = str(product.id)
+        product_pk = product.id
+
+    snapshot = ProductSnapshot(
+        title="No price found",
+        price_paise=None,
+        mrp_paise=None,
+        in_stock=True,
+        seller_name=None,
+        deal_label=None,
+        image=None,
+    )
+
+    async def fake_fetch_snapshot(url: str, redis: object, *args: object, **kwargs: object):
+        return ParsedProductUrl(Marketplace.amazon_in, "B0TEST0005", url), snapshot
+
+    monkeypatch.setattr(jobs_module, "fetch_snapshot", fake_fetch_snapshot)
+
+    await jobs_module.fetch_product({"redis": object()}, product_id)
+
+    with session_factory() as session:
+        points = session.query(PricePoint).filter_by(product_id=product_pk).all()
+        assert points == []
+
+        stored = session.get(Product, product_pk)
+        assert stored is not None
+        assert stored.last_checked_at is not None  # still advances, so no fast retry loop
+
+
+@pytest.mark.asyncio
 async def test_fetch_product_advances_last_checked_at_on_block(
     session_factory: Callable[[], Session], monkeypatch: pytest.MonkeyPatch
 ) -> None:

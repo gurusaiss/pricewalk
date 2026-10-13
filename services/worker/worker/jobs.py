@@ -54,12 +54,18 @@ async def fetch_product(ctx: dict[str, Any], product_id: str) -> None:
 
         new_change_events: list[ChangeEvent] = []
 
-        if should_store_price_point(last_point.ts if last_point else None, hash_changed, now):
+        # Without a parsed price, there's nothing reliable to record - storing
+        # a fabricated 0 would corrupt price history charts and could trigger
+        # a false "price dropped to zero" change event on this check, then a
+        # false "price rise" on the next successful one.
+        if snapshot.price_paise is not None and should_store_price_point(
+            last_point.ts if last_point else None, hash_changed, now
+        ):
             session.add(
                 PricePoint(
                     product_id=product.id,
                     ts=now,
-                    price_paise=snapshot.price_paise or 0,
+                    price_paise=snapshot.price_paise,
                     mrp_paise=snapshot.mrp_paise,
                     in_stock=snapshot.in_stock,
                     seller_name=snapshot.seller_name,

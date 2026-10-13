@@ -136,7 +136,7 @@ export default function GroupDetailPage() {
                       rel="noreferrer"
                       className="group inline-flex items-center gap-1.5 font-medium"
                     >
-                      {member.title ?? member.product_id}
+                      {member.title ?? "Fetching details…"}
                       <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </a>
                     {member.is_cheapest && (
@@ -196,7 +196,7 @@ export default function GroupDetailPage() {
         <PriceHistoryChart
           series={history.map((s) => ({
             id: s.product_id,
-            label: `${s.title ?? s.product_id} (${s.kind})`,
+            label: `${s.title ?? "Fetching details…"} (${s.kind})`,
             points: s.points,
           }))}
         />
