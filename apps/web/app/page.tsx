@@ -24,10 +24,10 @@ export default function Home() {
           day.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
-          <Link href="/login" className={buttonVariants({ size: "lg" })}>
+          <Link href="/signup" className={buttonVariants({ size: "lg" })}>
             I sell online
           </Link>
-          <Link href="/login" className={buttonVariants({ size: "lg", variant: "outline" })}>
+          <Link href="/signup" className={buttonVariants({ size: "lg", variant: "outline" })}>
             I&apos;m buying something
           </Link>
         </div>

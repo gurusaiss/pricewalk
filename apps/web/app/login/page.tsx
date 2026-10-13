@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,11 +11,10 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login, register } from "@/lib/api";
+import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,16 +23,11 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     try {
-      const user = mode === "signin" ? await login(email, password) : await register(email, password);
+      const user = await login(email, password);
+      toast.success("Signed in", { description: `Welcome back, ${user.email}.` });
       router.push(user.role ? `/${user.role}` : "/onboarding/role");
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : mode === "signin"
-            ? "Invalid email or password."
-            : "Could not create your account."
-      );
+      toast.error(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -46,14 +41,10 @@ export default function LoginPage() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-          <div className="border-b px-6 py-5">
-            <h1 className="font-display text-xl">
-              {mode === "signin" ? "Sign in" : "Create your account"}
-            </h1>
+          <div className="border-b bg-secondary/40 px-6 py-5">
+            <h1 className="font-display text-xl">Welcome back</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {mode === "signin"
-                ? "Enter your email and password."
-                : "Pick a password with at least 8 characters."}
+              Sign in with your email and password.
             </p>
           </div>
 
@@ -65,6 +56,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   required
+                  autoFocus
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@example.com"
@@ -76,7 +68,6 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   required
-                  minLength={mode === "signup" ? 8 : undefined}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="••••••••"
@@ -87,21 +78,11 @@ export default function LoginPage() {
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <>
-                    {mode === "signin" ? "Sign in" : "Create account"}
+                    Sign in
                     <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                   </>
                 )}
               </Button>
-
-              <button
-                type="button"
-                className="link-underline mx-auto text-sm text-muted-foreground"
-                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              >
-                {mode === "signin"
-                  ? "New here? Create an account"
-                  : "Already have an account? Sign in"}
-              </button>
 
               <div className="relative my-1 text-center text-xs text-muted-foreground">
                 <span className="relative z-10 bg-card px-2">or</span>
@@ -109,11 +90,21 @@ export default function LoginPage() {
               </div>
 
               <GoogleSignInButton
-                onSignedIn={(role) => router.push(role ? `/${role}` : "/onboarding/role")}
+                onSignedIn={(role) => {
+                  toast.success("Signed in with Google");
+                  router.push(role ? `/${role}` : "/onboarding/role");
+                }}
               />
             </form>
           </div>
         </div>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          New here?{" "}
+          <Link href="/signup" className="link-underline text-foreground">
+            Create an account
+          </Link>
+        </p>
       </div>
     </main>
   );

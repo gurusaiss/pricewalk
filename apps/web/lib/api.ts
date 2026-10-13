@@ -1,5 +1,12 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// Requests from the browser go through this same origin's /api/* proxy
+// (see next.config.mjs) rather than straight to API_URL, so the session
+// cookie the API sets is visible to this domain - a cookie set by a
+// cross-site response can't be relied on for subsequent fetches or for
+// middleware.ts to read.
+const BROWSER_API_BASE = "/api";
+
 export type CurrentUser = {
   id: string;
   email: string;
@@ -8,7 +15,7 @@ export type CurrentUser = {
 };
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${BROWSER_API_BASE}${path}`, {
     ...init,
     credentials: "include",
     headers: {
