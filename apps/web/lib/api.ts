@@ -201,6 +201,27 @@ export function addToWishlist(productUrl: string, targetPricePaise?: number) {
   });
 }
 
+export type ProductCandidate = {
+  marketplace: string;
+  title: string;
+  url: string;
+  price_paise: number | null;
+  image: string | null;
+};
+
+export type SmartTrackResult =
+  | { type: "direct_url"; url: string }
+  | { type: "candidates"; candidates: ProductCandidate[] }
+  | { type: "no_candidates" }
+  | { type: "unsupported"; message: string };
+
+export function smartTrack(text: string) {
+  return apiFetch<SmartTrackResult>("/buyer/wishlist/smart", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
 export function listWishlist() {
   return apiFetch<WishlistItem[]>("/buyer/wishlist");
 }

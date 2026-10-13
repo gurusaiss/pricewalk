@@ -52,6 +52,14 @@ class Settings(BaseSettings):
 
     sentry_dsn: str = ""
 
+    # Smart tracking (YouTube links / free-text product descriptions) - free
+    # tiers, Gemini tried first, Groq as fallback. Both optional: without
+    # either, smart tracking is simply unavailable and the UI says so.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.1-8b-instant"
+
 
 @lru_cache
 def get_settings() -> Settings:

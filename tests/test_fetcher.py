@@ -32,6 +32,13 @@ def test_looks_blocked_on_captcha_marker() -> None:
     assert looks_blocked(200, html) is not None
 
 
+def test_looks_blocked_on_akamai_interstitial() -> None:
+    # Amazon's silent bot-manager challenge page: 200 OK, no visible text
+    # marker like "captcha", just a bm-verify redirect + JS challenge.
+    html = '<meta http-equiv="refresh" content="5; URL=\'/s?k=x&bm-verify=AAQ...\'" />'
+    assert looks_blocked(200, html) is not None
+
+
 @pytest.mark.asyncio
 async def test_rate_limiter_blocks_second_immediate_request(redis: FakeAsyncRedis) -> None:
     limiter = DomainRateLimiter(redis, min_interval_seconds=60, max_wait_seconds=0.05)

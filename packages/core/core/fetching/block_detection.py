@@ -6,6 +6,7 @@ _BLOCK_MARKERS = (
     "unusual traffic",
     "automated access",
     "pardon our interruption",
+    "bm-verify",  # Akamai Bot Manager's silent JS interstitial challenge
 )
 
 
